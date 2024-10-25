@@ -11,6 +11,7 @@ class Game:
         # Setup
         self.display_surface = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption("RPG")
+        pygame.mixer.init()
         self.clock = pygame.time.Clock()
         self.running = True
 
@@ -27,6 +28,12 @@ class Game:
         self.enemy_event = pygame.event.custom_type()
         pygame.time.set_timer(self.enemy_event, 300)
         self.spawn_positions = []
+
+        self.shoot_sound = pygame.mixer.Sound(join('RPG', 'audio', 'shoot.wav'))
+        self.impact_sound = pygame.mixer.Sound(join('RPG', 'audio', 'impact.ogg'))
+        self.music = pygame.mixer.Sound(join('RPG', 'audio', 'music.wav'))
+        self.music.set_volume(0.3)
+        self.music.play(loops=-1)
         
         self.load_images()
         self.setup()
@@ -46,6 +53,7 @@ class Game:
 
     def input(self):
         if pygame.mouse.get_pressed()[0] and self.can_shoot:
+            self.shoot_sound.play()
             pos = self.gun.rect.center + self.gun.player_direction * 50
             Bullet(self.bullet_surf, pos, self.gun.player_direction, (self.all_sprites, self.bullet_sprites))
             self.can_shoot = False
@@ -78,9 +86,14 @@ class Game:
             for bullet in self.bullet_sprites:
                 collision_sprites = pygame.sprite.spritecollide(bullet, self.enemy_sprites, False, pygame.sprite.collide_mask)
                 if collision_sprites:
+                    self.impact_sound.play()
                     for sprite in collision_sprites:
                         sprite.destroy()
                         bullet.kill()
+
+    def player_collision(self):
+        if pygame.sprite.spritecollide(self.player, self.enemy_sprites, False, pygame.sprite.collide_mask):
+            self.running = False
 
     def run(self):
         while self.running:
@@ -96,6 +109,7 @@ class Game:
             self.input()
             self.all_sprites.update(dt)
             self.bullet_collision()
+            self.player_collision()
 
             self.display_surface.fill('black')
             self.all_sprites.draw(self.player.rect.center)
